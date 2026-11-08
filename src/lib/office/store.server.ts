@@ -26,10 +26,12 @@ import { PUBLISHED_RATES } from "./catalogue";
 import { buildQuoteDocument } from "./quote";
 import {
   DELEGATABLE_ACTIONS,
+  DELEGATION_PRESETS,
   delegatableRateIds,
   type DelegationAction,
   type DelegationPolicy,
 } from "./delegation";
+import { autonomyFromEnv } from "./autonomy-switch";
 import { planById } from "./plans";
 import { nextCycleStart } from "./subscription";
 import {
@@ -313,6 +315,7 @@ async function provisionOffice(): Promise<void> {
   if (existing.length) {
     await syncRoster(sql);
     await seedPaymentInstructions(sql);
+    await ensureStandingDelegation();
     return;
   }
 
@@ -375,6 +378,46 @@ async function provisionOffice(): Promise<void> {
   });
 
   await seedPaymentInstructions(sql);
+  await ensureStandingDelegation();
+}
+
+/**
+ * Give the office the standing authority it needs to act unattended.
+ *
+ * Autonomy is on by default, but authority is still a bounded, revocable
+ * promise. On first boot, with autonomy enabled and no delegation on file, the
+ * office writes the "Run the desk" preset as its standing delegation: it can
+ * answer a real enquiry, quote a published rate, invoice work the customer
+ * accepted, match an exact payment and deliver the report — and still cannot
+ * spend money, win a customer the customer never accepted, or end a
+ * subscription. A delegation the founder saved, paused or revoked is never
+ * touched, so revocation survives every restart.
+ */
+async function ensureStandingDelegation(): Promise<void> {
+  if (!autonomyFromEnv()) return;
+  if (await readDelegation()) return;
+  const preset = DELEGATION_PRESETS.find((item) => item.id === "unattended");
+  if (!preset) return;
+  // Authority must match capability: if mail is not connected, the office is
+  // not granted permission to email a customer it cannot actually reach. The
+  // founder can add that permission at /office/delegations once it is.
+  const mailConnected = smtpStatus().smtpConnected;
+  const allowedActions = preset.allowedActions.filter(
+    (action) => action !== "send_customer_mail" || mailConnected,
+  );
+  await saveDelegation({
+    label: "Run the desk (default standing delegation)",
+    status: "active",
+    actor: "constitution",
+    maxAmountCents: 500000,
+    maxActionsPerDay: 20,
+    maxActionsPerMonth: 200,
+    allowedActions,
+    allowedRateIds: delegatableRateIds(),
+    allowCustomerMail: preset.allowCustomerMail && mailConnected,
+    allowAutoReconcile: preset.allowAutoReconcile,
+    requireAcceptedQuote: preset.requireAcceptedQuote,
+  });
 }
 
 /**
@@ -990,6 +1033,8 @@ async function readDelegationUsageTx(sql: Sql, delegationId: string): Promise<De
 export async function saveDelegation(input: {
   label: string;
   status?: "active" | "paused";
+  /** Who wrote it. Defaults to the founder; first boot writes it as the constitution. */
+  actor?: string;
   maxAmountCents: number;
   maxActionsPerDay: number;
   maxActionsPerMonth: number;
@@ -1055,7 +1100,7 @@ export async function saveDelegation(input: {
     "delegation_saved",
     `Delegation "${label}" ${status === "paused" ? "paused" : "active"}`,
     `Actions: ${actions.length ? actions.join(", ") : "none"}. Limit R${(maxAmount / 100).toFixed(2)} per action, ${perDay} per day, ${perMonth} per month. Customer email ${input.allowCustomerMail ? "on" : "off"}. Automatic payment matching ${input.allowAutoReconcile ? "on" : "off"}.`,
-    "founder",
+    input.actor ?? "founder",
   );
   return { ok: true, delegation: delegation as DelegationPolicy };
 }

@@ -13,6 +13,15 @@ actually on the books, is there a real thing worth doing?**
 An empty answer is a successful run. Most of the time, the honest answer is that
 nothing needed doing, and the office says so rather than manufacturing activity.
 
+## The clock
+
+The server keeps its own time. An in-process clock asks the scheduler once a
+minute whether the floor is due, and runs exactly the tick a cron call would —
+with the same halt, database, chain and circuit-breaker guards. Autonomy is on
+unless `AUTONOMY` is set to `off`, so nothing has to be scheduled, seeded or
+switched on from outside. An external timer calling `/api/cron/floor` with a
+`CRON_SECRET` still works as a second heartbeat, but it is optional.
+
 ## The pace
 
 The office does not run every tick at the same width. It reads the state it is
@@ -47,9 +56,9 @@ reconstructing it from the queue afterwards.
 
 ```
                  ┌──────────────┐
-   GET           │  /api/cron   │  Bearer CRON_SECRET, AUTONOMY=on
-   /api/cron ───▶│    /floor    │  every 10 minutes
-   /floor        └──────┬───────┘
+   in-process    │  the tick    │  every minute: is the floor due?
+   clock ───────▶│              │  guards: halt, DB, chain, breaker
+                 └──────┬───────┘
                         │
                  ┌──────▼───────┐
                  │  refuse to   │  halted?  DB down?  chain broken?

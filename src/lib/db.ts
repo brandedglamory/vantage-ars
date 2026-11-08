@@ -226,10 +226,17 @@ function createNeonSql(): Promise<Sql> {
 async function loadMigrationSources(): Promise<Record<string, string>> {
   const glob = (import.meta as { glob?: unknown }).glob;
   if (typeof glob === "function") {
-    return (glob as (pattern: string, options: Record<string, unknown>) => Record<string, string>)(
-      "/migrations/*.sql",
-      { query: "?raw", import: "default", eager: true },
-    );
+    try {
+      return (glob as (pattern: string, options: Record<string, unknown>) => Record<string, string>)(
+        "/migrations/*.sql",
+        { query: "?raw", import: "default", eager: true },
+      );
+    } catch {
+      // Vite's module runner exposes `import.meta.glob` but cannot execute it
+      // outside a transformed module (the dev-server bootstrap loads this file
+      // through the runner). The migrations are on disk in that situation, so
+      // fall through to reading them rather than failing to start.
+    }
   }
 
   const { readdirSync, readFileSync } = await import("node:fs");

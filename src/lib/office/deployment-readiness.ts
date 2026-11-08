@@ -1,3 +1,5 @@
+import { AUTONOMY_DISARMED, autonomyEnabled } from "./autonomy-switch";
+
 export type DeploymentReadiness = {
   ready: boolean;
   score: number;
@@ -33,7 +35,7 @@ export function buildDeploymentReadiness(env: Record<string, unknown> = {}): Dep
   const authUrl = normalize(env.BETTER_AUTH_URL);
   const founderEmail = normalize(env.FOUNDER_EMAIL);
   const autonomy = normalize(env.AUTONOMY).toLowerCase();
-  const autonomyOn = autonomy === "on";
+  const autonomyOn = autonomyEnabled(autonomy);
 
   if (databaseUrl && !validUrl(databaseUrl, ["postgres:", "postgresql:"])) {
     invalidRequired.push("DATABASE_URL");
@@ -41,9 +43,14 @@ export function buildDeploymentReadiness(env: Record<string, unknown> = {}): Dep
   if (authSecret && authSecret.length < 32) invalidRequired.push("BETTER_AUTH_SECRET");
   if (authUrl && !validUrl(authUrl, ["http:", "https:"])) invalidRequired.push("BETTER_AUTH_URL");
   if (founderEmail && !validEmail(founderEmail)) invalidRequired.push("FOUNDER_EMAIL");
-  if (autonomy && autonomy !== "on" && autonomy !== "off") invalidRequired.push("AUTONOMY (use on or off)");
+  if (
+    autonomy &&
+    autonomy !== "on" &&
+    !(AUTONOMY_DISARMED as readonly string[]).includes(autonomy)
+  ) {
+    invalidRequired.push("AUTONOMY (use on or off)");
+  }
 
-  const cronSecret = normalize(env.CRON_SECRET);
   const smtpConfigured = SMTP_FIELDS.filter((key) => normalize(env[key]));
   const smtpPort = normalize(env.SMTP_PORT);
   const smtpPortValid =
@@ -63,9 +70,6 @@ export function buildDeploymentReadiness(env: Record<string, unknown> = {}): Dep
   if (invalidRequired.length > 0) {
     focus.push(`Correct invalid production values: ${invalidRequired.join(", ")}.`);
   }
-  if (autonomyOn && cronSecret.length < 16) {
-    focus.push("Set CRON_SECRET to at least 16 characters before enabling unattended scheduling.");
-  }
   if (smtpIncomplete) {
     focus.push(
       smtpPortValid
@@ -80,12 +84,12 @@ export function buildDeploymentReadiness(env: Record<string, unknown> = {}): Dep
     focus.push("Add a provider credential for AI-driven research or brief generation.");
   }
   if (!autonomyOn) {
-    focus.push("Autonomy is off; scheduled work remains disabled.");
+    focus.push("Autonomy is off; the office only runs when someone presses the button.");
   }
 
   let score = 40;
   score += Math.max(0, 15 - (requiredMissing.length + invalidRequired.length) * 5);
-  if (autonomyOn) score += cronSecret.length >= 16 ? 20 : -15;
+  if (autonomyOn) score += 20;
   if (smtpComplete) score += 10;
   else if (smtpConfigured.length > 0) score += 5;
   if (aiConfigured) score += 10;
@@ -94,18 +98,15 @@ export function buildDeploymentReadiness(env: Record<string, unknown> = {}): Dep
     focus.push("Deployment prerequisites are met; founder boundaries remain active.");
   }
 
-  const ready =
-    requiredMissing.length === 0 &&
-    invalidRequired.length === 0 &&
-    !(autonomyOn && cronSecret.length < 16);
+  const ready = requiredMissing.length === 0 && invalidRequired.length === 0;
   score = Math.max(0, Math.min(100, score));
   if (!ready) score = Math.min(score, 59);
 
   const summary = ready
     ? autonomyOn
-      ? "The deployment is ready for live launch. Scheduled work is enabled within the founder-set boundaries."
-      : "The deployment is ready for manual launch. Unattended scheduling stays disabled until AUTONOMY=on and CRON_SECRET is configured."
-    : "The deployment is not ready. Required production values must be valid, and enabled autonomy needs a strong cron secret.";
+      ? "The deployment is ready for live launch. The office keeps its own clock and works within the standing delegation."
+      : "The deployment is ready for manual launch. The office runs itself unless someone presses the button, because autonomy is switched off."
+    : "The deployment is not ready. Required production values must be present and valid.";
 
   return {
     ready,

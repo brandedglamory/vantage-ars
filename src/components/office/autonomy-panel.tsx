@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { founderMiddleware } from "@/lib/office/founder-gate";
+import { autonomyFromEnv } from "@/lib/office/autonomy-switch";
 import { redriveWork } from "@/lib/office/api";
 import { formatRelative } from "@/lib/office/format";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,7 @@ const readAutonomy = createServerFn({ method: "GET" })
       consecutiveFailures: status.consecutiveFailures,
       posture: status.posture,
       budget: status.budget,
-      autonomyOn: process.env.AUTONOMY?.trim().toLowerCase() === "on",
+      autonomyOn: autonomyFromEnv(),
       dueDuties: status.dueDuties,
       recentRuns: status.recentRuns.slice(0, 8).map((run) => ({
         id: run.id,

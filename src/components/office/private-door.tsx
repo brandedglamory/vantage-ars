@@ -78,7 +78,9 @@ export function PrivateDoor({ user }: PrivateDoorProps) {
 
     try {
       if (setupMode) {
-        if (!founderToken.trim()) throw new Error("Founder setup token is required.");
+        if (options?.setupTokenRequired && !founderToken.trim()) {
+          throw new Error("Founder setup token is required.");
+        }
         const emailProblem = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
         if (!emailProblem) throw new Error("Enter the founder email address.");
         const passwordProblem = checkPassword(password);
@@ -87,7 +89,11 @@ export function PrivateDoor({ user }: PrivateDoorProps) {
           email: email.trim().toLowerCase(),
           password,
           name: name.trim() || "Founder",
-          fetchOptions: { headers: { "x-founder-setup-token": founderToken.trim() } } as any,
+          fetchOptions: {
+            headers: founderToken.trim()
+              ? { "x-founder-setup-token": founderToken.trim() }
+              : ({} as Record<string, string>),
+          } as any,
         });
         const failure = authFailure(result);
         if (failure) throw new Error(messageOf(failure, "Founder account setup failed."));
@@ -261,7 +267,7 @@ export function PrivateDoor({ user }: PrivateDoorProps) {
                     </h1>
                     <p className="mt-4 max-w-md text-sm leading-6 text-muted">
                       {setupMode
-                        ? "Create the primary founder identity for the Vantage-ARS operations desk."
+                        ? "Create the primary founder identity for the Vantage-ARS operations desk. The office bootstraps itself; this is the one account it cannot create for you."
                         : "Authenticated access is required before entering the private operations environment."}
                     </p>
                   </div>
@@ -338,7 +344,7 @@ export function PrivateDoor({ user }: PrivateDoorProps) {
                     </div>
                   ) : null}
 
-                  {setupMode ? (
+                  {setupMode && options?.setupTokenRequired ? (
                     <div className="space-y-2">
                       <Label htmlFor="founder-token">Founder setup token</Label>
                       <Input

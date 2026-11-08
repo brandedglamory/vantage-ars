@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/cron/floor")({
         if (!result.ok) {
           if (result.reason === "Unauthorized")
             return new Response("Unauthorized", { status: 401 });
-          if (result.reason === "AUTONOMY is not on.")
+          if (result.reason === "Autonomy is off.")
             return new Response("Autonomy is off.", { status: 404 });
           return Response.json(
             { ok: false, reason: result.reason ?? "The run failed." },

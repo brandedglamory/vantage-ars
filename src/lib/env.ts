@@ -1,3 +1,4 @@
+import { autonomyEnabled } from "./office/autonomy-switch.ts";
 import { payfastReadiness } from "./office/payfast-readiness.ts";
 
 /**
@@ -47,13 +48,12 @@ export function validateEnv(
   const missing = CRITICAL_ENV.filter((key) => !env(key, source));
   const advised = ADVISED_ENV.filter((key) => !env(key, source));
   const blocked: string[] = [];
-  const autonomyEnabled = env("AUTONOMY", source)?.trim().toLowerCase() === "on";
+  const autonomyOn = autonomyEnabled(env("AUTONOMY", source));
 
-  if (autonomyEnabled && !env("CRON_SECRET", source)) {
-    blocked.push("CRON_SECRET is required when AUTONOMY=on.");
-  }
-  if (autonomyEnabled && !env("BETTER_AUTH_SECRET", source)) {
-    blocked.push("BETTER_AUTH_SECRET is required when AUTONOMY=on.");
+  // The office keeps its own time (see self-clock.server.ts), so the HTTP
+  // trigger's CRON_SECRET is optional. The auth secret is not.
+  if (autonomyOn && !env("BETTER_AUTH_SECRET", source)) {
+    blocked.push("BETTER_AUTH_SECRET is required while autonomy is enabled.");
   }
 
   const payfast = payfastReadiness(source);

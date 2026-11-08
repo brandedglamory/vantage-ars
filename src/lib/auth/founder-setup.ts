@@ -12,6 +12,7 @@
  */
 import { createHash, timingSafeEqual } from "node:crypto";
 import { founderEmail } from "@/lib/office/company";
+import { autonomyEnabled } from "@/lib/office/autonomy-switch";
 
 export const FOUNDER_SETUP_HEADER = "x-founder-setup-token";
 
@@ -54,10 +55,23 @@ export async function founderAccountExists(): Promise<boolean> {
   return Number(rows[0]?.n ?? 0) > 0;
 }
 
-/** True while the one-time founder setup can still be used. */
+/** Whether a setup token is configured (and long enough to count). */
+export function setupTokenRequired(configured = process.env.FOUNDER_SETUP_TOKEN): boolean {
+  const token = configured?.trim();
+  return Boolean(token && token.length >= 16);
+}
+
+/**
+ * True while the one-time founder setup can still be used.
+ *
+ * First-run setup is open while there is no founder account and either a setup
+ * token is configured or the office runs autonomously. An autonomous office
+ * bootstraps its own founder instead of waiting for a secret someone has to
+ * paste in first. Configuring a token closes that door and makes the token
+ * mandatory again.
+ */
 export async function founderSetupOpen(): Promise<boolean> {
-  const token = process.env.FOUNDER_SETUP_TOKEN?.trim();
-  if (!token || token.length < 16) return false;
+  if (!setupTokenRequired() && !autonomyEnabled(process.env.AUTONOMY)) return false;
   return !(await founderAccountExists());
 }
 
@@ -75,8 +89,16 @@ export async function checkFounderSignUp(
       error: "Sign-up is closed. This office has one founder account.",
     };
   }
-  if (!setupTokenMatches(presentedToken)) {
-    return { ok: false, error: "The setup token is missing or wrong." };
+  if (setupTokenRequired()) {
+    if (!setupTokenMatches(presentedToken)) {
+      return { ok: false, error: "The setup token is missing or wrong." };
+    }
+  } else if (!autonomyEnabled(process.env.AUTONOMY)) {
+    return {
+      ok: false,
+      error:
+        "Founder setup is closed. Set FOUNDER_SETUP_TOKEN, or enable autonomy, to create the founder account.",
+    };
   }
   if (await founderAccountExists()) {
     return {

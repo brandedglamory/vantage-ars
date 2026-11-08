@@ -62,12 +62,26 @@ import {
 } from "./store.server";
 import { DELEGATABLE_ACTIONS, DELEGATION_PRESETS } from "./delegation";
 import { tick, runNow, schedulerStatus } from "./scheduler.server";
+import { autonomyFromEnv } from "./autonomy-switch";
 import { publicStatus } from "./public-status";
 import { buildDeploymentReadiness } from "./deployment-readiness";
 import type { OfficeHealth } from "./health.server";
 import { listWork, workCounts } from "./work-queue.server";
 import { redriveAbandonedWork } from "./redrive.server";
 import type { DispatchResult, OfficeSnapshot, ProposedAction } from "./types";
+
+// The office keeps its own time. Starting the in-process clock when this server
+// module loads means autonomy never depends on an external cron, a repository
+// secret or anyone pressing a button. It is a no-op in the browser, when
+// autonomy is off, and under the test runner's DB-skip flag.
+if (typeof window === "undefined" && process.env.VANTAGE_SKIP_DB_BOOTSTRAP !== "1") {
+  void import("./self-clock.server")
+    .then((mod) => mod.startSelfClock())
+    .catch(() => {
+      // A process that cannot start its clock still serves; the tick is retried
+      // on the next surface hit.
+    });
+}
 
 async function applyPlan(
   agentId: string,
@@ -832,8 +846,8 @@ export const runOfficeCron = createServerFn({ method: "POST" })
       if (expected.length < 16 || !secretEqual(data.secret, expected)) {
         return { ok: false, reason: "Unauthorized" };
       }
-      if (process.env.AUTONOMY?.trim().toLowerCase() !== "on") {
-        return { ok: false, reason: "AUTONOMY is not on." };
+      if (!autonomyFromEnv()) {
+        return { ok: false, reason: "Autonomy is off." };
       }
       try {
         const result = await tick();

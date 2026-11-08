@@ -22,14 +22,12 @@ const OPTIONAL = [
 
 const env = process.env;
 const missingRequired = REQUIRED.filter((key) => !String(env[key] ?? "").trim());
-const autonomyOn = String(env.AUTONOMY ?? "").trim().toLowerCase() === "on";
+const DISARMED = ["off", "false", "0", "no", "paused"];
+const autonomyOn = !DISARMED.includes(String(env.AUTONOMY ?? "").trim().toLowerCase());
 const blocked = [];
 
-if (autonomyOn && !String(env.CRON_SECRET ?? "").trim()) {
-  blocked.push("CRON_SECRET is required when AUTONOMY=on");
-}
 if (autonomyOn && !String(env.BETTER_AUTH_SECRET ?? "").trim()) {
-  blocked.push("BETTER_AUTH_SECRET is required when AUTONOMY=on");
+  blocked.push("BETTER_AUTH_SECRET is required while autonomy is enabled");
 }
 
 const smtpConfigured = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"].filter(
@@ -58,7 +56,7 @@ if (autonomyOn) {
     console.log("Autonomy prerequisites: OK");
   }
 } else {
-  console.log("Autonomy is off; unattended scheduling is disabled until AUTONOMY=on.");
+  console.log("Autonomy is off; the office only runs when someone presses the button.");
 }
 
 if (smtpIncomplete) {

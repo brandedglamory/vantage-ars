@@ -39,6 +39,12 @@ function pgliteBootstrapPlugin(): Plugin {
         if (typeof mod.ensureDbReady === "function") {
           await mod.ensureDbReady();
         }
+        // The office keeps its own time: start the in-process scheduler before
+        // traffic, so autonomy does not need an external cron process.
+        const clock = (await server.ssrLoadModule("/src/lib/office/self-clock.server.ts")) as {
+          startSelfClock?: () => void;
+        };
+        clock.startSelfClock?.();
       } catch (err) {
         console.error("[app-builder] DB bootstrap failed:", err);
         throw err;

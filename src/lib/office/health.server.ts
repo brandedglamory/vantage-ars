@@ -23,6 +23,7 @@
  * amount, never a credential. It is served to unauthenticated callers.
  */
 import { databaseHealth, getSql } from "../db";
+import { autonomyFromEnv } from "./autonomy-switch";
 import { smtpStatus } from "./smtp.server";
 import { schedulerStatus } from "./scheduler.server";
 import { readDutyView } from "./office-view.server";
@@ -228,7 +229,7 @@ export async function officeHealth(options: { full?: boolean } = {}): Promise<Of
       );
     }
   }
-  const autonomyEnabled = process.env.AUTONOMY?.trim().toLowerCase() === "on";
+  const autonomyEnabled = autonomyFromEnv();
 
   // Everything below needs a working database. Report honestly rather than
   // throwing, so a monitor gets a document it can read.

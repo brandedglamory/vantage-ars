@@ -57,12 +57,13 @@ describe("deployment readiness", () => {
     assert.ok(result.score < 60);
   });
 
-  it("describes manual launch readiness without implying unattended scheduling", () => {
+  it("describes manual launch readiness when autonomy is switched off", () => {
     const result = buildDeploymentReadiness({
       DATABASE_URL: "postgres://db",
       BETTER_AUTH_SECRET: "12345678901234567890123456789012",
       BETTER_AUTH_URL: "https://auth.example.com",
       FOUNDER_EMAIL: "founder@example.com",
+      AUTONOMY: "off",
     });
 
     assert.equal(result.ready, true);
@@ -86,6 +87,5 @@ describe("deployment readiness", () => {
     assert.ok(result.focus.some((item) => item.includes("BETTER_AUTH_SECRET")));
     assert.ok(result.focus.some((item) => item.includes("BETTER_AUTH_URL")));
     assert.ok(result.focus.some((item) => item.includes("FOUNDER_EMAIL")));
-    assert.ok(result.focus.some((item) => item.includes("CRON_SECRET")));
   });
 });

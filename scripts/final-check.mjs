@@ -2,16 +2,11 @@
 
 import { execSync } from "node:child_process";
 
-const REQUIRED = [
-  "DATABASE_URL",
-  "BETTER_AUTH_SECRET",
-  "BETTER_AUTH_URL",
-  "FOUNDER_EMAIL",
-  "CRON_SECRET",
-];
+const REQUIRED = ["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL", "FOUNDER_EMAIL"];
 
 const missing = REQUIRED.filter((key) => !String(process.env[key] ?? "").trim());
-const autonomyOn = String(process.env.AUTONOMY ?? "").trim().toLowerCase() === "on";
+const DISARMED = ["off", "false", "0", "no", "paused"];
+const autonomyOn = !DISARMED.includes(String(process.env.AUTONOMY ?? "").trim().toLowerCase());
 
 console.log("Vantage-ARS final launch check\n");
 console.log(`AUTONOMY: ${autonomyOn ? "ON" : "OFF"}`);

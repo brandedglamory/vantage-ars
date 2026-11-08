@@ -26,8 +26,11 @@ Author: Juan-louw Greyling <juanlouw.greyling@gmail.com>
 
 ## The office runs itself
 
-With `AUTONOMY=on` and a `CRON_SECRET`, ten agents work a durable queue every
-ten minutes. Each has named duties on their own cadence: reception classifies
+Ten agents work a durable queue on a clock the server keeps itself: an
+in-process tick asks the scheduler once a minute whether the floor is due, so no
+external cron, GitHub Action, repository secret or button press is required.
+Autonomy is on by default; set `AUTONOMY=off` to disarm every unattended run.
+Each has named duties on their own cadence: reception classifies
 enquiries, marketing scores leads on what the buyer actually wrote, flags repeat
 site interest as prospects, and drafts weekly owned-channel campaigns, then files
 a founder-gated handoff when demand is real; sales drafts real follow-ups on real
@@ -38,17 +41,22 @@ book, the orchestrator briefs you once a day from the books, and compliance halt
 the office if the audit chain ever fails to verify. It also reminds the founder
 weekly when an approval has waited a week; it never approves one on a timer.
 
-None of them email a customer, spend money, win or lose a customer, or publish
-anything. Those are founder approvals, with the constitutional trace attached —
-unless you have granted a standing delegation.
+None of them spend money, end a subscription, or sell to someone who never
+wrote in. Those stay founder decisions, with the constitutional trace attached.
+The commercial work the office can do alone is bounded by the standing
+delegation it writes for itself on first boot.
 
 Full detail, including every duty and every brake: **[docs/autonomy.md](docs/autonomy.md)**.
 
 ## Standing delegation (ART-13)
 
-Nothing is delegated by default. The office ships with no delegation at all, and
-it stops at the founder gate for every cost, every customer win, every customer
-loss and every marketing-to-sales handoff.
+On first boot, with autonomy enabled and no delegation on file, the office
+writes one standing delegation for itself: the "Run the desk" preset. That lets
+it answer a real enquiry, quote a published rate, invoice work the customer
+accepted, match an exact payment, start a published subscription and deliver the
+report without waiting. It still cannot spend money, end a subscription, or sell
+to someone who never contacted it. A delegation the founder saved, paused or
+revoked is never overwritten, so revocation survives every restart.
 
 A delegation is the founder answering a whole class of question in advance:
 "for this bounded class of action, at this price, up to this many times a day,
@@ -62,8 +70,8 @@ permit a price that is not published, permit a promise to a customer, or survive
 a halt. Every action taken under one is written into the audit chain against the
 delegation that allowed it.
 
-The founder sets it at **`/office/delegations`**. Four presets are offered, and
-none of them is on until it is saved.
+The founder changes, pauses or revokes it at **`/office/delegations`**. The
+presets there are starting points; the default one is already saved.
 
 ## Productised services and recurring revenue
 
@@ -173,10 +181,10 @@ Everything is in [`.env.example`](.env.example). The ones that matter:
 | `PGLITE_DATA_DIR`                                                   | With PGLite, keep data here. Unset means in-memory, lost on restart.                 |
 | `BETTER_AUTH_URL`                                                   | The public URL.                                                                      |
 | `BETTER_AUTH_SECRET`                                                | A long random secret (`openssl rand -base64 32`). Required in production.            |
-| `FOUNDER_SETUP_TOKEN`                                               | One-time code for creating the founder account. Remove it afterwards.                |
+| `FOUNDER_SETUP_TOKEN` | Optional. When set, first-run founder setup requires it. Unset, the first visit creates the founder account. |
 | `FOUNDER_EMAIL`                                                     | The only account allowed into the office.                                            |
-| `AUTONOMY`                                                          | `on` lets the office act unattended. Anything else and only the button works.        |
-| `CRON_SECRET`                                                       | Bearer token the scheduler must present. 16+ characters.                             |
+| `AUTONOMY` | Off switch. `off` (or `false`, `0`, `no`, `paused`) disarms the office; unset means it runs itself. |
+| `CRON_SECRET` | Optional bearer token for an external `/api/cron/floor` timer. The built-in clock does not need it. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Optional outbound mail over implicit TLS (port 465); use a provider-verified sender. |
 | `GMAIL_SMTP_USER`, `GMAIL_SMTP_APP_PASSWORD`                        | Legacy Gmail fallback; messages use the Gmail account as sender.                     |
 | `FOUNDER_WEBHOOK_URL`                                               | Optional HTTPS webhook for the same founder notices (Slack, Discord or generic).     |
@@ -191,10 +199,10 @@ SPF/DKIM records before switching the sender.
 
 ## Founder setup (once)
 
-1. Set `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `FOUNDER_SETUP_TOKEN` and, if needed, `FOUNDER_EMAIL`. Deploy.
+1. Set `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` and, if needed, `FOUNDER_EMAIL`. Deploy.
 2. Open `/office`. The page offers "First-time founder setup".
-3. Enter the founder email, a password of 12+ characters and the setup token.
-4. Remove `FOUNDER_SETUP_TOKEN` and redeploy. Sign-up is closed once a founder exists.
+3. Enter the founder email and a password of 12+ characters. A setup token is asked for only when `FOUNDER_SETUP_TOKEN` is configured; leaving it unset lets the autonomous office bootstrap its own founder on first visit.
+4. Sign-up is closed once a founder exists. Set `FOUNDER_SETUP_TOKEN` and redeploy if you would rather gate that first visit behind a secret.
 
 ## Final launch verification
 
@@ -223,14 +231,12 @@ variables to set, the founder setup, the domain cutover, and how to verify it.
 
 1. Import the GitHub repo in Vercel.
 2. Add a Neon database and set `DATABASE_URL`, then the auth settings above.
-3. Set `AUTONOMY=on` and a generated `CRON_SECRET`. The ten-minute tick is
-   scheduled by the `office-scheduler` GitHub Actions workflow — add the same
-   `CRON_SECRET` as a repository secret (Settings → Secrets and variables →
-   Actions) so the scheduler call authenticates. GitHub's cron is best-effort
-   on quiet repositories, so the office also nudges itself: a hit on
-   `/api/health` or a real page view starts a catch-up tick when the last one
-   is over ten minutes old. `vercel.json` keeps a daily run as the final
-   fallback (Vercel's Hobby plan rejects crons more often than daily).
+3. Autonomy is on by default and the server keeps its own clock, so no external
+   timer is required. Optionally set a generated `CRON_SECRET` and let the
+   `office-scheduler` GitHub Actions workflow call `/api/cron/floor` as a second
+   heartbeat (GitHub's cron is best-effort on quiet repositories). A hit on
+   `/api/health` or a real page view still starts a catch-up tick when the last
+   one is over ten minutes old.
 4. Deploy. `npm run build` applies migrations.
 5. Check `https://www.vantage-ars.co.za/api/health` — `scheduler.overdue` should
    be `false`.
@@ -238,13 +244,13 @@ variables to set, the founder setup, the domain cutover, and how to verify it.
 ### Docker (any server)
 
 ```sh
-cp .env.example .env      # set AUTONOMY=on, CRON_SECRET, auth settings
+cp .env.example .env      # auth settings; autonomy is on unless you set AUTONOMY=off
 docker compose up -d --build
 ```
 
 The compose file also starts a `scheduler` sidecar that ticks
-`/api/cron/floor` every ten minutes with your `CRON_SECRET`, so an unattended
-server never depends on GitHub Actions cron.
+`/api/cron/floor` ten-minute heartbeat, but it is optional now: the app's own
+clock runs the floor even if the sidecar is removed.
 
 ### Plain Node
 

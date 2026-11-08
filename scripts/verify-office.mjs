@@ -863,11 +863,11 @@ async function main() {
     String(afterNudge[0].last_tick_at),
   );
 
-  // ── 23. Nothing is delegated by default ───────────────────────────────────
+  // ── 23. The office writes its own standing delegation ─────────────────────
   // ART-13 hands the founder a bounded, revocable authority over a class of
-  // work. It is not on by default: an office nobody has given one to still
-  // stops at the founder gate, and the actions that exist only under a
-  // delegation are refused outright rather than escalated.
+  // work. An autonomous office writes the "Run the desk" authority for itself
+  // on first boot; the founder can revoke it at any moment, and revocation
+  // takes effect on the very next action.
   const {
     readDelegation,
     readDelegationUsage,
@@ -904,11 +904,31 @@ async function main() {
     await sql`select id, amount_cents from ledger_entries where kind = 'invoice' and status = 'paid' limit 1`
   )[0];
 
-  const noDelegation = await readDelegation();
+  const defaultDelegation = await readDelegation();
   check(
-    "the office has no standing delegation by default",
-    noDelegation === null,
-    JSON.stringify(noDelegation),
+    "the office writes a standing delegation for itself on first boot",
+    defaultDelegation?.status === "active" && defaultDelegation.label.includes("Run the desk"),
+    JSON.stringify(defaultDelegation),
+  );
+  check(
+    "the default delegation leaves the founder's reserved decisions alone",
+    defaultDelegation !== null &&
+      !defaultDelegation.allowedActions.includes("cancel_subscription") &&
+      defaultDelegation.requireAcceptedQuote === true,
+    JSON.stringify(defaultDelegation?.allowedActions),
+  );
+
+  const revokedStanding = await revokeDelegation("Verification: withdraw the standing authority.");
+  check(
+    "the founder can revoke the standing delegation",
+    revokedStanding.ok === true,
+    JSON.stringify(revokedStanding),
+  );
+  const afterRevoke = await readDelegation();
+  check(
+    "a revoked delegation stays revoked",
+    afterRevoke?.status === "revoked",
+    JSON.stringify(afterRevoke),
   );
 
   const autonomousMail = await applyProposedAction(
@@ -925,7 +945,7 @@ async function main() {
     { source: "scheduler", autonomous: true },
   );
   check(
-    "an autonomous customer email is refused without a delegation",
+    "an autonomous customer email is refused once the delegation is revoked",
     autonomousMail.status === "blocked",
     autonomousMail.status,
   );
@@ -955,7 +975,7 @@ async function main() {
     { source: "scheduler", autonomous: true },
   );
   check(
-    "an autonomous subscription is refused without a delegation",
+    "an autonomous subscription is refused once the delegation is revoked",
     autonomousStart.status === "blocked",
     autonomousStart.status,
   );
@@ -989,6 +1009,9 @@ async function main() {
     allowAutoReconcile: true,
     requireAcceptedQuote: true,
   };
+  // Usage counts every delegated action since the calendar day began. This
+  // verification starts its own caps from zero on its own scratch database.
+  await sql`delete from delegation_usage`;
   const saved = await saveDelegation(generous);
   check("the founder's delegation was written down", saved.ok, JSON.stringify(saved));
 
@@ -1633,11 +1656,13 @@ async function main() {
     await decisionReason(afterRevokeAction.decisionId),
   );
   const revocationAudit = await sql`
-    select kind, body from audit_events where kind = 'delegation_revoked'
+    select kind, body from audit_events where kind = 'delegation_revoked' order by created_at
   `;
   check(
-    "the revocation is on the audit chain",
-    revocationAudit.length === 1 && revocationAudit[0].body.includes("standing delegation"),
+    "every revocation is on the audit chain",
+    revocationAudit.length >= 1 &&
+      revocationAudit.every((row) => row.body.includes("standing delegation")) &&
+      revocationAudit[revocationAudit.length - 1].body.includes("founder ended"),
     JSON.stringify(revocationAudit),
   );
 

@@ -17,6 +17,7 @@
  * instance cut it short.
  */
 import { getSql } from "@/lib/db";
+import { autonomyFromEnv } from "./autonomy-switch";
 import { COMPANY } from "./company";
 import { shouldKick } from "./kick";
 import { FAILURE_LIMIT, runNow, type TickResult } from "./scheduler.server";
@@ -38,7 +39,7 @@ export type KickOutcome = { kicked: true; detail: string } | { kicked: false; re
  * surface; it never throws and never acts outside the scheduler's guards.
  */
 export async function kickFloorIfStale(): Promise<KickOutcome> {
-  if (process.env.AUTONOMY?.trim().toLowerCase() !== "on") {
+  if (!autonomyFromEnv()) {
     return { kicked: false, reason: "autonomy-off" };
   }
   const nowMs = Date.now();
