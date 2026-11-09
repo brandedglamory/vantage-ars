@@ -73,7 +73,7 @@ export const Route = createRootRoute({
           </TooltipProvider>
         </AuthProvider>
         <Toaster theme="light" position="bottom-right" />
-        <Analytics />
+        {import.meta.env.VITE_VERCEL_ANALYTICS === "true" ? <Analytics /> : null}
         <Scripts />
       </body>
     </html>

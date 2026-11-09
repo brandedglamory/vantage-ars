@@ -151,6 +151,13 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: { tsconfigPaths: true },
+  define: {
+    // Vercel Web Analytics is served by Vercel only. Everywhere else the
+    // beacon script 404s on each page load, so the root route skips it.
+    "import.meta.env.VITE_VERCEL_ANALYTICS": JSON.stringify(
+      process.env.VERCEL ? "true" : "false",
+    ),
+  },
   plugins: [
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
