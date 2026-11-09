@@ -67,7 +67,14 @@ import { buildDeploymentReadiness } from "./deployment-readiness";
 import type { OfficeHealth } from "./health.server";
 import { listWork, workCounts } from "./work-queue.server";
 import { redriveAbandonedWork } from "./redrive.server";
-import type { DispatchResult, OfficeSnapshot, ProposedAction } from "./types";
+import type {
+  DatabaseRecordPage,
+  DatabaseTableSummary,
+  DispatchResult,
+  OfficeSnapshot,
+  ProposedAction,
+  SystemDashboard,
+} from "./types";
 
 async function applyPlan(
   agentId: string,
@@ -1259,4 +1266,65 @@ export const getFounderOperationsReport = createServerFn({ method: "GET" })
 
     const research = await loadFounderMarketResearch();
     return { health, recovery, research };
+  });
+
+/** Bounded integer for paginated reads; the caller never sets the ceiling. */
+function clampNumber(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(Math.trunc(parsed), max));
+}
+
+/**
+ * The system dashboard: health, active users and recent activity in one read.
+ *
+ * Founder only — it names the accounts that can sign in, which is not public
+ * information. The office health document it carries is the same coarse one
+ * `/api/health` serves, so the two can never contradict each other.
+ */
+export const getSystemDashboard = createServerFn({ method: "GET" })
+  .middleware([founderMiddleware])
+  .handler(async (): Promise<SystemDashboard> => {
+    const { readSystemDashboard } = await import("./system-dashboard.server");
+    return readSystemDashboard();
+  });
+
+/** Every table in the office database, with a row count. Founder only. */
+export const listDatabaseTables = createServerFn({ method: "GET" })
+  .middleware([founderMiddleware])
+  .handler(async (): Promise<{ tables: DatabaseTableSummary[] }> => {
+    const { listDatabaseTables: read } = await import("./database-browser.server");
+    return { tables: await read() };
+  });
+
+/** One page of records from one table. Founder only. */
+export const readDatabaseTable = createServerFn({ method: "POST" })
+  .middleware([founderMiddleware])
+  .validator((input: { table?: string; limit?: number; offset?: number; q?: string }) => ({
+    table: str(input?.table, 80),
+    limit: clampNumber(input?.limit, 25, 1, 100),
+    offset: clampNumber(input?.offset, 0, 0, 10_000_000),
+    q: str(input?.q, 120),
+  }))
+  .handler(async ({ data }): Promise<DatabaseRecordPage> => {
+    const { readDatabaseTable: read } = await import("./database-browser.server");
+    return read(data);
+  });
+
+/**
+ * Delete one record by primary key. Founder only.
+ *
+ * Refused for the tables whose rows are the record itself (audit chain,
+ * decisions, ledger, identity, migrations), and written into the audit chain
+ * when it does happen.
+ */
+export const deleteDatabaseRecord = createServerFn({ method: "POST" })
+  .middleware([founderMiddleware])
+  .validator((input: { table?: string; id?: string }) => ({
+    table: str(input?.table, 80),
+    id: str(input?.id, 500),
+  }))
+  .handler(async ({ data }): Promise<{ deleted: boolean }> => {
+    const { deleteDatabaseRecord: remove } = await import("./database-browser.server");
+    return remove(data);
   });

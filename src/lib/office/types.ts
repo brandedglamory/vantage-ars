@@ -488,3 +488,105 @@ export type RevenueMetrics = {
   upcomingRenewals: UpcomingRenewal[];
   planMix: { planId: string; title: string; subscriptions: number; monthlyCents: number }[];
 };
+
+/**
+ * The system dashboard wire document (`/dashboard`).
+ *
+ * Coarse on purpose, exactly like the health document it summarises: states,
+ * counts and timestamps. It never carries a customer's name, an amount per
+ * customer, a credential or a session token — the browser's `session.id` is
+ * deliberately not in it.
+ */
+export type SystemHealthSummary = {
+  ok: boolean;
+  halted: boolean;
+  haltReason: string | null;
+  problems: string[];
+  database: { ok: boolean; source: string; latencyMs: number };
+  chain: { ok: boolean; detail: string };
+  scheduler: {
+    autonomyEnabled: boolean;
+    lastTickAt: string | null;
+    minutesSinceTick: number | null;
+    overdue: boolean;
+    consecutiveFailures: number;
+    posture: string;
+    budget: number;
+    dutiesDue: number;
+    duties: number;
+  };
+  queue: { open: number; claimed: number; abandoned: number; done: number };
+  mail: { connected: boolean; account: string | null };
+  rateCard: { ok: boolean; detail: string };
+  delegation: {
+    exists: boolean;
+    status: string | null;
+    usedToday: number;
+    dailyActionCap: number;
+    capExhausted: boolean;
+  };
+};
+
+export type SystemUserSession = {
+  email: string;
+  name: string;
+  signedInAt: string;
+  expiresAt: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+};
+
+export type SystemDashboard = {
+  checkedAt: string;
+  runtime: {
+    version: string;
+    uptimeSeconds: number;
+    database: string;
+    environment: string;
+  };
+  health: SystemHealthSummary;
+  users: {
+    /** Every account that can sign in. */
+    total: number;
+    /** Sessions that are valid right now. */
+    activeSessions: number;
+    /** Sessions created in the last 24 hours. */
+    signInsLastDay: number;
+    recent: SystemUserSession[];
+  };
+  activity: {
+    audit: { id: string; kind: string; title: string; actor: string; createdAt: string }[];
+    runs: { id: string; agentId: string; duty: string; status: string; durationMs: number; startedAt: string }[];
+    site: { kind: string; path: string; occurredAt: string }[];
+  };
+};
+
+/** One row of the database browser's table list (`/database-browser`). */
+export type DatabaseTableSummary = {
+  name: string;
+  rows: number;
+  columns: number;
+  /** True when the browser refuses to delete from this table, and why. */
+  readOnlyReason: string | null;
+};
+
+export type DatabaseColumn = {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  primaryKey: boolean;
+};
+
+/** A single cell, already normalised to something JSON can carry. */
+export type DatabaseCell = string | number | boolean | null;
+
+export type DatabaseRecordPage = {
+  table: string;
+  columns: DatabaseColumn[];
+  primaryKey: string | null;
+  rows: Record<string, DatabaseCell>[];
+  total: number;
+  limit: number;
+  offset: number;
+  readOnlyReason: string | null;
+};

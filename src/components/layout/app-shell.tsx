@@ -1,10 +1,12 @@
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import {
+  Activity,
   BarChart3,
   Bot,
   BriefcaseBusiness,
   ClipboardCheck,
+  Database,
   FileCheck2,
   FileText,
   Headphones,
@@ -62,6 +64,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/office/governance", label: "Record", Icon: ClipboardCheck },
   { href: "/office/audit", label: "Audit", Icon: ScrollText },
   { href: "/office/metrics", label: "Metrics", Icon: BarChart3 },
+  { href: "/dashboard", label: "System", Icon: Activity },
+  { href: "/database-browser", label: "Database", Icon: Database },
 ];
 
 const GOVERNANCE_HREFS = new Set([
@@ -83,10 +87,15 @@ const CUSTOMER_WORKSPACE_HREFS = new Set([
 const CUSTOMER_WORKSPACE_ITEMS = NAV_ITEMS.filter((item) =>
   CUSTOMER_WORKSPACE_HREFS.has(item.href),
 );
+const SYSTEM_HREFS = new Set(["/dashboard", "/database-browser"]);
 const OPERATIONS_NAV_ITEMS = NAV_ITEMS.filter(
-  (item) => !GOVERNANCE_HREFS.has(item.href) && !CUSTOMER_WORKSPACE_HREFS.has(item.href),
+  (item) =>
+    !GOVERNANCE_HREFS.has(item.href) &&
+    !CUSTOMER_WORKSPACE_HREFS.has(item.href) &&
+    !SYSTEM_HREFS.has(item.href),
 );
 const GOVERNANCE_NAV_ITEMS = NAV_ITEMS.filter((item) => GOVERNANCE_HREFS.has(item.href));
+const SYSTEM_NAV_ITEMS = NAV_ITEMS.filter((item) => SYSTEM_HREFS.has(item.href));
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
   const location = useLocation();
@@ -159,6 +168,14 @@ function OfficeNavigation({
       </div>
 
       {GOVERNANCE_NAV_ITEMS.map((item) => (
+        <NavLink key={item.href} {...item} onClick={onNavigate} />
+      ))}
+
+      <div className="office-nav-heading mb-3 mt-7 px-3 font-mono text-[9px] uppercase tracking-[0.22em] text-muted">
+        System
+      </div>
+
+      {SYSTEM_NAV_ITEMS.map((item) => (
         <NavLink key={item.href} {...item} onClick={onNavigate} />
       ))}
     </nav>

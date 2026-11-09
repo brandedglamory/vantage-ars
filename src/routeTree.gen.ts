@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssessRouteImport } from './routes/assess'
 import { Route as AutomationRouteImport } from './routes/automation'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DatabaseBrowserRouteImport } from './routes/database-browser'
 import { Route as FindRouteImport } from './routes/find'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GuidesRouteImport } from './routes/guides'
@@ -70,6 +72,16 @@ const AssessRoute = AssessRouteImport.update({
 const AutomationRoute = AutomationRouteImport.update({
   id: '/automation',
   path: '/automation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatabaseBrowserRoute = DatabaseBrowserRouteImport.update({
+  id: '/database-browser',
+  path: '/database-browser',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FindRoute = FindRouteImport.update({
@@ -297,6 +309,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assess': typeof AssessRoute
   '/automation': typeof AutomationRoute
+  '/dashboard': typeof DashboardRoute
+  '/database-browser': typeof DatabaseBrowserRoute
   '/find': typeof FindRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guides': typeof GuidesRouteWithChildren
@@ -346,6 +360,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assess': typeof AssessRoute
   '/automation': typeof AutomationRoute
+  '/dashboard': typeof DashboardRoute
+  '/database-browser': typeof DatabaseBrowserRoute
   '/find': typeof FindRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guides': typeof GuidesRouteWithChildren
@@ -394,6 +410,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/assess': typeof AssessRoute
   '/automation': typeof AutomationRoute
+  '/dashboard': typeof DashboardRoute
+  '/database-browser': typeof DatabaseBrowserRoute
   '/find': typeof FindRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/guides': typeof GuidesRouteWithChildren
@@ -445,6 +463,8 @@ export interface FileRouteTypes {
     | '/'
     | '/assess'
     | '/automation'
+    | '/dashboard'
+    | '/database-browser'
     | '/find'
     | '/forgot-password'
     | '/guides'
@@ -494,6 +514,8 @@ export interface FileRouteTypes {
     | '/'
     | '/assess'
     | '/automation'
+    | '/dashboard'
+    | '/database-browser'
     | '/find'
     | '/forgot-password'
     | '/guides'
@@ -541,6 +563,8 @@ export interface FileRouteTypes {
     | '/'
     | '/assess'
     | '/automation'
+    | '/dashboard'
+    | '/database-browser'
     | '/find'
     | '/forgot-password'
     | '/guides'
@@ -591,6 +615,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssessRoute: typeof AssessRoute
   AutomationRoute: typeof AutomationRoute
+  DashboardRoute: typeof DashboardRoute
+  DatabaseBrowserRoute: typeof DatabaseBrowserRoute
   FindRoute: typeof FindRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GuidesRoute: typeof GuidesRouteWithChildren
@@ -636,6 +662,20 @@ declare module '@tanstack/react-router' {
       path: '/automation'
       fullPath: '/automation'
       preLoaderRoute: typeof AutomationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/database-browser': {
+      id: '/database-browser'
+      path: '/database-browser'
+      fullPath: '/database-browser'
+      preLoaderRoute: typeof DatabaseBrowserRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/find': {
@@ -1025,6 +1065,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssessRoute: AssessRoute,
   AutomationRoute: AutomationRoute,
+  DashboardRoute: DashboardRoute,
+  DatabaseBrowserRoute: DatabaseBrowserRoute,
   FindRoute: FindRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GuidesRoute: GuidesRouteWithChildren,
