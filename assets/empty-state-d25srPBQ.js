@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-lTuChwRC.js";var t=e();function n({title:e,body:n}){return(0,t.jsxs)(`div`,{className:`rounded-xl bg-raised px-5 py-10 text-center shadow-[var(--shadow-border)]`,children:[(0,t.jsx)(`p`,{className:`font-serif text-2xl text-fg`,children:e}),(0,t.jsx)(`p`,{className:`mx-auto mt-2 max-w-md text-sm text-muted`,children:n})]})}export{n as t};
