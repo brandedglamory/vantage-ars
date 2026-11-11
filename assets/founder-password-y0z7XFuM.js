@@ -1,0 +1,1 @@
+function e(e,t){return e.length<12?`Password must be at least 12 characters.`:e.length>256?`Password must be at most 256 characters.`:t!==void 0&&e!==t?`Passwords do not match.`:/^\d+$/.test(e)||/^([a-z]|[A-Z])+$/.test(e)?`Mix in a number or a symbol so the password is not a single character class.`:null}export{e as t};

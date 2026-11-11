@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-lTuChwRC.js";import{n as t,r as n}from"./use-current-user-B4g_Slm7.js";var r=e();function i(){let{user:e,isPending:i}=t();return i?(0,r.jsx)(`div`,{className:`grid min-h-dvh place-items-center bg-bg`,children:(0,r.jsx)(`p`,{className:`animate-pulse text-sm text-muted`,children:`Signing in…`})}):(0,r.jsx)(n,{user:e})}export{i as component};
