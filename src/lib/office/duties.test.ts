@@ -363,10 +363,52 @@ describe("foyer intake", () => {
       createdAt: hoursAgo(1),
     };
     assert.deepEqual(planDuty("foyer_stale_intake", view({ inbound: [fresh] })), []);
-    assert.equal(
-      planDuty("foyer_stale_intake", view({ inbound: [{ ...fresh, createdAt: hoursAgo(30) }] }))
-        .length,
-      1,
+    const stale = { ...fresh, createdAt: hoursAgo(30) };
+    assert.equal(planDuty("foyer_stale_intake", view({ inbound: [stale] })).length, 1);
+
+    assert.deepEqual(
+      planDuty(
+        "foyer_stale_intake",
+        view({
+          inbound: [stale],
+          leads: [
+            {
+              id: "ld1",
+              companyName: "Acme",
+              stage: "engaged",
+              score: 40,
+              summary: "x",
+              inboundId: fresh.id,
+              updatedAt: hoursAgo(29),
+            },
+          ],
+        }),
+      ),
+      [],
+      "an inbound linked to a lead has already been handled",
+    );
+
+    assert.deepEqual(
+      planDuty(
+        "foyer_stale_intake",
+        view({
+          inbound: [stale],
+          tickets: [
+            {
+              id: "tk1",
+              title: "Support request",
+              severity: "normal",
+              status: "open",
+              ownerAgent: "forge",
+              summary: "x",
+              relatedId: fresh.id,
+              updatedAt: hoursAgo(29),
+            },
+          ],
+        }),
+      ),
+      [],
+      "an inbound linked to a ticket has already been handled",
     );
   });
 });

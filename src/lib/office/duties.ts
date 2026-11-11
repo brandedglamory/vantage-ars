@@ -861,9 +861,13 @@ function planFoyerIntake(view: DutyView): PlannedWork[] {
 }
 
 function planFoyerStaleIntake(view: DutyView): PlannedWork[] {
+  const handled = new Set<string>();
+  for (const lead of view.leads) if (lead.inboundId) handled.add(lead.inboundId);
+  for (const ticket of view.tickets) if (ticket.relatedId) handled.add(ticket.relatedId);
+
   const work: PlannedWork[] = [];
   for (const item of view.inbound) {
-    if (item.status !== "received") continue;
+    if (item.status !== "received" || handled.has(item.id)) continue;
     const age = ageMinutes(item.createdAt, view.now);
     if (age < 4 * HOUR) continue;
     work.push({
