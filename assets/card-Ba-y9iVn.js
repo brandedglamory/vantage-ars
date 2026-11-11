@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-lTuChwRC.js";import{t}from"./utils-D0T3A-kS.js";var n=e();function r({className:e,...r}){return(0,n.jsx)(`div`,{className:t(`rounded-xl bg-surface p-5 shadow-[var(--shadow-border)]`,e),...r})}export{r as t};
