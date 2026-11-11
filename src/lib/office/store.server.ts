@@ -1067,21 +1067,23 @@ export async function saveDelegation(input: {
 export async function revokeDelegation(
   reason: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const sql = await getSql();
-  const rows = await sql<{ id: string }>`select id from delegations where id = ${DELEGATION_ID}`;
-  if (!rows.length) return { ok: false, error: "There is no delegation to revoke." };
-  await sql`
-    update delegations
-    set status = 'revoked', revoked_at = now(), updated_at = now()
-    where id = ${DELEGATION_ID}
-  `;
-  await appendAudit(
-    "delegation_revoked",
-    "Delegation revoked",
-    `The founder revoked the standing delegation. ${reason.replace(/\s+/g, " ").trim().slice(0, 400)}`,
-    "founder",
-  );
-  return { ok: true };
+  return withChain(async (tx) => {
+    const rows = await tx<{ id: string }>`select id from delegations where id = ${DELEGATION_ID}`;
+    if (!rows.length) return { ok: false, error: "There is no delegation to revoke." };
+    await tx`
+      update delegations
+      set status = 'revoked', revoked_at = now(), updated_at = now()
+      where id = ${DELEGATION_ID}
+    `;
+    await appendAuditTx(
+      tx,
+      "delegation_revoked",
+      "Delegation revoked",
+      `The founder revoked the standing delegation. ${reason.replace(/\s+/g, " ").trim().slice(0, 400)}`,
+      "founder",
+    );
+    return { ok: true };
+  });
 }
 
 async function recordDecisionTx(

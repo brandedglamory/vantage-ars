@@ -1599,9 +1599,92 @@ async function main() {
     ),
   );
 
-  // ── 33. Revocation takes effect immediately ───────────────────────────────
-  const revoked = await revokeDelegation("The founder ended the standing authority.");
+  // ── 33. Revocation and its audit event commit together ────────────────────
+  // Force the audit insert to fail once. The policy must remain active because
+  // the update and audit-chain append share one transaction.
+  await sql`
+    alter table audit_events
+    add constraint verify_revoke_audit_failure check (kind <> 'delegation_revoked')
+  `;
+  let revocationAuditFailed = false;
+  try {
+    await revokeDelegation("This attempt should roll back with its audit event.");
+  } catch {
+    revocationAuditFailed = true;
+  } finally {
+    await sql`alter table audit_events drop constraint verify_revoke_audit_failure`;
+  }
+  const policyAfterAuditFailure = await readDelegation();
+  const auditsAfterFailure = await sql`
+    select id from audit_events where kind = 'delegation_revoked'
+  `;
+  check(
+    "an audit-write failure rolls back the revocation",
+    revocationAuditFailed &&
+      policyAfterAuditFailure?.status === "active" &&
+      auditsAfterFailure.length === 0,
+    JSON.stringify({
+      revocationAuditFailed,
+      status: policyAfterAuditFailure?.status,
+      audits: auditsAfterFailure.length,
+    }),
+  );
+
+  const racingActionTitle = `Managed plan started · ${customer} · revocation race`;
+  const [revoked, racingAction] = await Promise.all([
+    revokeDelegation("The founder ended the standing authority."),
+    applyProposedAction(
+      "desk",
+      {
+        kind: "send_customer_mail",
+        title: racingActionTitle,
+        rationale: "This action races the founder's revocation and must serialize with it.",
+        confidence: 0.92,
+        amountCents: 0,
+        companyName: customer,
+        relatedId: subscription?.id,
+        payload: { template: "subscription_started", subscriptionId: subscription?.id },
+      },
+      { source: "scheduler", autonomous: true },
+    ),
+  ]);
   check("the delegation was revoked", revoked.ok, JSON.stringify(revoked));
+  check(
+    "the action racing revocation observes one serialized outcome",
+    racingAction.status === "executed" || racingAction.status === "blocked",
+    JSON.stringify(racingAction),
+  );
+  const raceAudit = await sql`
+    select kind, title, previous_hash, record_hash from audit_events
+    where kind = 'delegation_revoked'
+    union all
+    select 'decision_record_' || status as kind, title, previous_hash, record_hash from decisions
+    where title = ${racingActionTitle}
+    union all
+    select kind, title, previous_hash, record_hash from audit_events
+    where title = ${racingActionTitle} and kind in ('decision_executed', 'decision_blocked')
+  `;
+  const revokeEvent = raceAudit.find((event) => event.kind === "delegation_revoked");
+  const actionDecision = raceAudit.find(
+    (event) => event.kind === `decision_record_${racingAction.status}`,
+  );
+  const actionEvent = raceAudit.find(
+    (event) =>
+      event.title === racingActionTitle && event.kind !== `decision_record_${racingAction.status}`,
+  );
+  const actionBeforeRevocation =
+    actionDecision?.previous_hash !== undefined &&
+    actionEvent?.previous_hash === actionDecision.record_hash &&
+    revokeEvent?.previous_hash === actionEvent.record_hash;
+  const revocationBeforeAction =
+    revokeEvent?.previous_hash !== undefined &&
+    actionDecision?.previous_hash === revokeEvent.record_hash &&
+    actionEvent?.previous_hash === actionDecision.record_hash;
+  check(
+    "the racing action and revocation occupy serialized audit-chain positions",
+    raceAudit.length === 3 && (actionBeforeRevocation || revocationBeforeAction),
+    JSON.stringify({ racingAction: racingAction.status, raceAudit }),
+  );
   const afterRevocation = await readDelegation();
   check(
     "the policy reads back as revoked",
