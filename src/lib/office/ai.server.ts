@@ -635,18 +635,55 @@ async function callSingleModel(target: ModelTarget, payload: string): Promise<Re
   return null;
 }
 
+// Lightweight, in-process health tracking so a repeatedly failing free model is
+// skipped for a short cooldown instead of being retried on every office tick.
+const modelHealth = new Map<string, { failures: number; openUntil: number }>();
+
+function modelHealthy(model: string): boolean {
+  const entry = modelHealth.get(model);
+  if (!entry) return true;
+  if (Date.now() >= entry.openUntil) {
+    modelHealth.delete(model);
+    return true;
+  }
+  return false;
+}
+
+function recordModelSuccess(model: string): void {
+  modelHealth.delete(model);
+}
+
+function recordModelFailure(model: string): void {
+  const entry = modelHealth.get(model);
+  const failures = (entry?.failures ?? 0) + 1;
+  const openUntil = failures >= 3 ? Date.now() + 60_000 : 0;
+  modelHealth.set(model, { failures, openUntil });
+}
+
 /** Try the primary model, then any free-model fallbacks, so a retired or rate-limited model never blocks the office. */
 async function callModel(target: ModelTarget, payload: string): Promise<Response | null> {
   const candidates = [target, ...(target.fallbacks ?? [])];
   let last: Response | null = null;
   for (const candidate of candidates) {
+    if (!modelHealthy(candidate.model)) continue;
     const res = await callSingleModel(candidate, payload);
-    if (res && res.ok) return res;
-    if (res && res.status >= 400 && res.status < 500 && res.status !== 429) {
-      // A client error on this model is unlikely to be fixed by another free model.
+    if (res && res.ok) {
+      recordModelSuccess(candidate.model);
       return res;
     }
+    if (res && res.status >= 400 && res.status < 500 && res.status !== 429) {
+      // A client error on this model is unlikely to be fixed by another free model.
+      recordModelFailure(candidate.model);
+      return res;
+    }
+    recordModelFailure(candidate.model);
     last = res ?? last;
+  }
+  // Every model is on cooldown: try the primary once more rather than failing the office.
+  if (!last) {
+    const res = await callSingleModel(target, payload);
+    if (res?.ok) recordModelSuccess(target.model);
+    return res;
   }
   return last;
 }
