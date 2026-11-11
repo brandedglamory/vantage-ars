@@ -28,6 +28,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiSiteSignalRouteImport } from './routes/api/site-signal'
+import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 import { Route as OfficeIndexRouteImport } from './routes/office/index'
 import { Route as OfficeApprovalsRouteImport } from './routes/office/approvals'
@@ -150,6 +151,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
 const ApiSiteSignalRoute = ApiSiteSignalRouteImport.update({
   id: '/api/site-signal',
   path: '/api/site-signal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVersionRoute = ApiVersionRouteImport.update({
+  id: '/api/version',
+  path: '/api/version',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuidesSlugRoute = GuidesSlugRouteImport.update({
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/work': typeof WorkRoute
   '/api/health': typeof ApiHealthRoute
   '/api/site-signal': typeof ApiSiteSignalRoute
+  '/api/version': typeof ApiVersionRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/office/approvals': typeof OfficeApprovalsRoute
   '/office/audit': typeof OfficeAuditRoute
@@ -360,6 +367,7 @@ export interface FileRoutesByTo {
   '/work': typeof WorkRoute
   '/api/health': typeof ApiHealthRoute
   '/api/site-signal': typeof ApiSiteSignalRoute
+  '/api/version': typeof ApiVersionRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/office/approvals': typeof OfficeApprovalsRoute
   '/office/audit': typeof OfficeAuditRoute
@@ -410,6 +418,7 @@ export interface FileRoutesById {
   '/work': typeof WorkRoute
   '/api/health': typeof ApiHealthRoute
   '/api/site-signal': typeof ApiSiteSignalRoute
+  '/api/version': typeof ApiVersionRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/office/approvals': typeof OfficeApprovalsRoute
   '/office/audit': typeof OfficeAuditRoute
@@ -461,6 +470,7 @@ export interface FileRouteTypes {
     | '/work'
     | '/api/health'
     | '/api/site-signal'
+    | '/api/version'
     | '/guides/$slug'
     | '/office/approvals'
     | '/office/audit'
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/work'
     | '/api/health'
     | '/api/site-signal'
+    | '/api/version'
     | '/guides/$slug'
     | '/office/approvals'
     | '/office/audit'
@@ -557,6 +568,7 @@ export interface FileRouteTypes {
     | '/work'
     | '/api/health'
     | '/api/site-signal'
+    | '/api/version'
     | '/guides/$slug'
     | '/office/approvals'
     | '/office/audit'
@@ -607,6 +619,7 @@ export interface RootRouteChildren {
   WorkRoute: typeof WorkRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSiteSignalRoute: typeof ApiSiteSignalRoute
+  ApiVersionRoute: typeof ApiVersionRoute
   QTokenRoute: typeof QTokenRoute
   ToolsEmailAuthRoute: typeof ToolsEmailAuthRoute
   ToolsNetworkPathRoute: typeof ToolsNetworkPathRoute
@@ -748,6 +761,13 @@ declare module '@tanstack/react-router' {
       path: '/api/site-signal'
       fullPath: '/api/site-signal'
       preLoaderRoute: typeof ApiSiteSignalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/version': {
+      id: '/api/version'
+      path: '/api/version'
+      fullPath: '/api/version'
+      preLoaderRoute: typeof ApiVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guides/$slug': {
@@ -1041,6 +1061,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkRoute: WorkRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSiteSignalRoute: ApiSiteSignalRoute,
+  ApiVersionRoute: ApiVersionRoute,
   QTokenRoute: QTokenRoute,
   ToolsEmailAuthRoute: ToolsEmailAuthRoute,
   ToolsNetworkPathRoute: ToolsNetworkPathRoute,

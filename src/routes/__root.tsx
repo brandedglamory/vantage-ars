@@ -95,19 +95,41 @@ function NotFound() {
   return (
     <PublicFrame>
       <section className="py-24">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Missing page</p>
-        <h1 className="mt-4 font-serif text-4xl tracking-[-0.03em]">
-          That page is not on this site.
-        </h1>
-        <p className="mt-4 max-w-md text-sm text-muted">
-          The services, the service desk, and the published rates are still here.
-        </p>
-        <Link
-          to="/"
-          className="mt-8 inline-flex h-11 items-center text-sm text-accent underline-offset-4 hover:underline"
-        >
-          Back to services
-        </Link>
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">404 - Missing page</p>
+          <h1 className="mt-4 font-serif text-4xl tracking-[-0.03em] sm:text-5xl">
+            That page is not on this site.
+          </h1>
+          <p className="mx-auto mt-4 max-w-md text-sm text-muted">
+            The services, the service desk, the service finder, and the published rates are still here. Let us help you find what you need.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              to="/"
+              className="inline-flex h-11 items-center rounded-md bg-accent px-6 text-sm font-medium text-accent-fg transition-colors hover:bg-accent/90"
+            >
+              Back to home
+            </Link>
+            <Link
+              to="/services"
+              className="inline-flex h-11 items-center rounded-md border border-border px-6 text-sm transition-colors hover:bg-raised"
+            >
+              View services
+            </Link>
+            <Link
+              to="/find"
+              className="inline-flex h-11 items-center rounded-md border border-border px-6 text-sm transition-colors hover:bg-raised"
+            >
+              Find a service
+            </Link>
+            <Link
+              to="/rates"
+              className="inline-flex h-11 items-center rounded-md border border-border px-6 text-sm transition-colors hover:bg-raised"
+            >
+              View rates
+            </Link>
+          </div>
+        </div>
       </section>
     </PublicFrame>
   );

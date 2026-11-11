@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "vite dev --host 0.0.0.0 --port 8080",
+    "dev:debug": "DEBUG=* vite dev --host 0.0.0.0 --port 8080",
     "build": "vite build && npm run db:migrate",
     "build:ci": "npm run build",
     "start": "node .output/server/index.mjs",
@@ -22,12 +23,17 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "VANTAGE_SKIP_DB_BOOTSTRAP=1 node --experimental-strip-types --import ./scripts/register-test-resolver.mjs --test --test-concurrency=4 \"scripts/**/*.test.mjs\" \"src/**/*.test.ts\" && node --experimental-strip-types --import ./scripts/register-test-resolver.mjs scripts/verify-office.mjs",
+    "test:unit": "VANTAGE_SKIP_DB_BOOTSTRAP=1 node --experimental-strip-types --import ./scripts/register-test-resolver.mjs --test --test-concurrency=4 \"scripts/**/*.test.mjs\" \"src/**/*.test.ts\"",
+    "test:watch": "VANTAGE_SKIP_DB_BOOTSTRAP=1 node --experimental-strip-types --import ./scripts/register-test-resolver.mjs --test --watch --test-concurrency=4 \"scripts/**/*.test.mjs\" \"src/**/*.test.ts\"",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" vercel.json wrangler.jsonc .prettierrc",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" vercel.json wrangler.jsonc .prettierrc",
     "check": "npm run typecheck && npm run lint && npm test",
+    "check:fast": "npm run typecheck && npm run lint",
     "ci:verify": "npm run check && npm run build:ci",
     "validate": "npm run typecheck && npm run lint && npm test",
-    "verify:office": "node --experimental-strip-types --import ./scripts/register-test-resolver.mjs scripts/verify-office.mjs"
+    "verify:office": "node --experimental-strip-types --import ./scripts/register-test-resolver.mjs scripts/verify-office.mjs",
+    "clean": "rm -rf .output dist .turbo node_modules/.vite",
+    "clean:build": "rm -rf .output dist"
   },
   "sideEffects": false,
   "overrides": {
