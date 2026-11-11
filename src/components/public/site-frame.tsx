@@ -8,6 +8,7 @@ import {
   ChevronDown,
   FileText,
   Gauge,
+  Gamepad2,
   Headphones,
   Menu as MenuIcon,
   MessageCircle,
@@ -65,6 +66,7 @@ const exploreSections = [
       { to: "/guides", label: "Read the guides", Icon: BookOpen },
       { to: "/work", label: "See the work", Icon: FileText },
       { to: "/model", label: "How the office works", Icon: Workflow },
+      { to: "/game", label: "Play Signal Sweep", Icon: Gamepad2 },
     ],
   },
 ] as const;
@@ -415,6 +417,9 @@ export function PublicFrame({ children }: { children: ReactNode }) {
             </Link>
             <Link to="/guides" className="text-muted transition-colors hover:text-fg">
               Guides
+            </Link>
+            <Link to="/game" className="text-muted transition-colors hover:text-fg">
+              Signal Sweep arcade
             </Link>
             <Link to="/tools/email-auth" className="text-muted transition-colors hover:text-fg">
               Email authentication check

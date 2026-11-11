@@ -12,6 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const EXPECTED: Record<string, string> = {
   "index.tsx": '"/"',
   "find.tsx": '"/find"',
+  "game.tsx": '"/game"',
   "assess.tsx": '"/assess"',
   "automation.tsx": '"/automation"',
   "guides.tsx": '"/guides"',
