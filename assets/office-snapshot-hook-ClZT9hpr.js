@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{t}from"./react-CaKr0epQ.js";import{t as n}from"./office-snapshot-context-Dpw4NxJN.js";var r=e(t(),1);function i(){let e=(0,r.useContext)(n);if(!e)throw Error(`Office records are not available.`);return e}export{i as t};

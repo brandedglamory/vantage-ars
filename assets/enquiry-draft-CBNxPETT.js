@@ -1,0 +1,1 @@
+var e=`vantage-enquiry-draft`;function t(t){let n=t.trim();if(!n||n.length>2800)return!1;try{return window.sessionStorage.setItem(e,n),!0}catch{return!1}}export{t as n,e as t};
