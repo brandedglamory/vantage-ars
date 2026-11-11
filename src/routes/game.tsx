@@ -35,6 +35,7 @@ type Action =
   | { type: "move"; direction: -1 | 1 }
   | { type: "boost" }
   | { type: "toggle" }
+  | { type: "pause" }
   | { type: "tick" }
   | { type: "best"; value: number };
 
@@ -58,6 +59,9 @@ function reducer(game: Game, action: Action): Game {
     if (game.status === "running") return { ...game, status: "paused" };
     if (game.status === "paused") return { ...game, status: "running" };
     return game;
+  }
+  if (action.type === "pause") {
+    return game.status === "running" ? { ...game, status: "paused" } : game;
   }
   if (game.status !== "running") return game;
   if (action.type === "move") return { ...game, lane: Math.max(0, Math.min(4, game.lane + action.direction)) };
@@ -133,14 +137,22 @@ function SignalSprint() {
   const [game, dispatch] = useReducer(reducer, initialGame);
 
   useEffect(() => {
-    const stored = Number(window.localStorage.getItem("signal-sprint-best") ?? 0);
-    if (Number.isFinite(stored) && stored > 0) dispatch({ type: "best", value: stored });
+    try {
+      const stored = Number(window.localStorage.getItem("signal-sprint-best") ?? 0);
+      if (Number.isFinite(stored) && stored > 0) dispatch({ type: "best", value: stored });
+    } catch {
+      // The game remains playable when browser storage is disabled.
+    }
   }, []);
 
   useEffect(() => {
     if (game.status === "over" && game.best > 0) {
-      const stored = Number(window.localStorage.getItem("signal-sprint-best") ?? 0);
-      if (game.best > stored) window.localStorage.setItem("signal-sprint-best", String(game.best));
+      try {
+        const stored = Number(window.localStorage.getItem("signal-sprint-best") ?? 0);
+        if (game.best > stored) window.localStorage.setItem("signal-sprint-best", String(game.best));
+      } catch {
+        // Saving a personal best is optional; never interrupt the run.
+      }
     }
   }, [game.status, game.best]);
 
@@ -149,6 +161,14 @@ function SignalSprint() {
     const timer = window.setInterval(() => dispatch({ type: "tick" }), 50);
     return () => window.clearInterval(timer);
   }, [game.status]);
+
+  useEffect(() => {
+    function pauseWhenHidden() {
+      if (document.visibilityState === "hidden") dispatch({ type: "pause" });
+    }
+    document.addEventListener("visibilitychange", pauseWhenHidden);
+    return () => document.removeEventListener("visibilitychange", pauseWhenHidden);
+  }, []);
 
   const move = useCallback((direction: -1 | 1) => dispatch({ type: "move", direction }), []);
   useEffect(() => {
