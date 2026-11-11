@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-lTuChwRC.js";import{K as t}from"./index-Dgdb2-y8.js";var n=e();function r(){return(0,n.jsx)(t,{})}export{r as component};
