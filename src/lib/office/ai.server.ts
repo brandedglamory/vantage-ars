@@ -617,7 +617,11 @@ async function callModel(target: ModelTarget, payload: string): Promise<Response
     try {
       const res = await fetch(target.url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${target.key}`,
+          ...(target.headers ?? {}),
+        },
         body: payload,
         signal: AbortSignal.timeout(25_000),
       });

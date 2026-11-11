@@ -27,9 +27,10 @@ describe("model provider", () => {
     });
     assert.equal(t?.provider, "xai");
   });
-  it("falls back to xAI, and to nothing when no keys are set", () => {
+  it("falls back to xAI, and to a free OpenCode Zen model when no keys are set", () => {
     assert.equal(resolveModelTarget({ XAI_API_KEY: "x" })?.provider, "xai");
-    assert.equal(resolveModelTarget({}), null);
+    assert.equal(resolveModelTarget({})?.provider, "opencode-zen");
+    assert.equal(resolveModelTarget({})?.url, "https://opencode.ai/zen/v1/chat/completions");
   });
   it("honours the configured xAI model", () => {
     const t = resolveModelTarget({ XAI_API_KEY: "x", XAI_MODEL: "grok-custom" });
@@ -37,8 +38,12 @@ describe("model provider", () => {
   });
   it("ignores a malformed account id rather than building a bad URL", () => {
     assert.equal(
-      resolveModelTarget({ CLOUDFLARE_ACCOUNT_ID: "../evil", CLOUDFLARE_API_TOKEN: "tok" }),
-      null,
+      resolveModelTarget({ CLOUDFLARE_ACCOUNT_ID: "../evil", CLOUDFLARE_API_TOKEN: "tok" })?.provider,
+      "opencode-zen",
+    );
+    assert.equal(
+      resolveModelTarget({ CLOUDFLARE_ACCOUNT_ID: "../evil", CLOUDFLARE_API_TOKEN: "tok" })?.url,
+      "https://opencode.ai/zen/v1/chat/completions",
     );
   });
   it("honours a model override", () => {

@@ -54,11 +54,26 @@ export function resolveProvider(env) {
   if (wanted === "huggingface") {
     return { provider: "huggingface", model: hfModel || "google/gemma-2-2b-it" };
   }
+  if (
+    wanted === "opencode" ||
+    wanted === "opencode-zen" ||
+    wanted === "zen" ||
+    wanted === "opencode-zen-completions"
+  ) {
+    return {
+      provider: wanted === "opencode" ? "opencode" : wanted === "zen" ? "zen" : "opencode-zen",
+      model: (env.OPENCODE_ZEN_MODEL ?? env.OPENCODE_MODEL ?? env.ZEN_MODEL ?? "mimo-v2.6-flash-free").trim(),
+    };
+  }
   if (wanted !== "xai" && account && token && ACCOUNT_RE.test(account))
     return { provider: "workers-ai", model: (env.WORKERS_AI_MODEL ?? "").trim() || DEFAULT_MODEL };
   if (xai) return { provider: "xai", model: (env.XAI_MODEL ?? "").trim() || "grok-4.5" };
   if (hfModel) return { provider: "huggingface", model: hfModel };
-  return { provider: "none", model: null };
+  // Free-model fallback keeps the office autonomous without paid credentials.
+  return {
+    provider: "opencode-zen",
+    model: (env.OPENCODE_ZEN_MODEL ?? env.OPENCODE_MODEL ?? env.ZEN_MODEL ?? "mimo-v2.6-flash-free").trim(),
+  };
 }
 
 /** Fails if wrangler.jsonc embeds anything secret-like. Secrets live in host env, never in git. */

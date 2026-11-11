@@ -1,21 +1,69 @@
 export type ModelTarget = {
-  provider: "workers-ai" | "xai" | "huggingface";
+  provider:
+    | "workers-ai"
+    | "xai"
+    | "huggingface"
+    | "opencode"
+    | "opencode-zen"
+    | "zen"
+    | string;
   url: string;
   key: string;
   model: string;
+  headers?: Record<string, string>;
 };
 
-/**
- * Chooses the reasoning model.
- *
- * The office prefers a configured provider in this order:
- * 1) Cloudflare Workers AI when both host credentials are present
- * 2) xAI when API key + model are configured
- * 3) Hugging Face free/public inference when the host selects it
- *
- * The founder controls the actual business actions; these choices only widen the
- * assistant's research and drafting capacity without allowing unattended sales.
- */
+const OPENCODE_ZEN_URL = "https://opencode.ai/zen/v1/chat/completions";
+const OPENCODE_ZEN_DEFAULT_MODEL = "mimo-v2.6-flash-free";
+const OPENCODE_ZEN_HEADERS = {
+  "User-Agent": "opencode/1.15.9 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14",
+  "X-Opencode-Client": "cli",
+  "X-Opencode-Project": "global",
+};
+
+function opencodeModel(env: Record<string, string | undefined>): string {
+  return (
+    env.OPENCODE_ZEN_MODEL?.trim() ||
+    env.OPENCODE_MODEL?.trim() ||
+    env.ZEN_MODEL?.trim() ||
+    env.OPENCODE_ZEN_MODEL_ID?.trim() ||
+    OPENCODE_ZEN_DEFAULT_MODEL
+  );
+}
+
+function opencodeKey(env: Record<string, string | undefined>): string {
+  return (
+    env.OPENCODE_ZEN_API_KEY?.trim() ||
+    env.OPENCODE_API_KEY?.trim() ||
+    env.ZEN_API_KEY?.trim() ||
+    "public"
+  );
+}
+
+function opencodeTarget(
+  env: Record<string, string | undefined>,
+  provider: string,
+): ModelTarget {
+  const url =
+    env.OPENCODE_ZEN_URL?.trim() ||
+    env.OPENCODE_URL?.trim() ||
+    OPENCODE_ZEN_URL;
+  return {
+    provider,
+    url,
+    key: opencodeKey(env),
+    model: opencodeModel(env),
+    headers: OPENCODE_ZEN_HEADERS,
+  };
+}
+
+const OPENCODE_ZEN_ALIASES = new Set([
+  "opencode",
+  "opencode-zen",
+  "opencode-zen-completions",
+  "zen",
+]);
+
 export function resolveModelTarget(env: Record<string, string | undefined>): ModelTarget | null {
   const account = env.CLOUDFLARE_ACCOUNT_ID?.trim();
   const token = env.CLOUDFLARE_API_TOKEN?.trim();
@@ -41,6 +89,10 @@ export function resolveModelTarget(env: Record<string, string | undefined>): Mod
       key: hfToken || "",
       model,
     };
+  }
+
+  if (wanted && OPENCODE_ZEN_ALIASES.has(wanted)) {
+    return opencodeTarget(env, wanted);
   }
 
   if (wanted !== "xai" && account && token && /^[a-f0-9]{32}$/i.test(account)) {
@@ -71,5 +123,6 @@ export function resolveModelTarget(env: Record<string, string | undefined>): Mod
     };
   }
 
-  return null;
+  // Free, no-key fallback: keeps the office autonomous without paid credentials.
+  return opencodeTarget(env, "opencode-zen");
 }

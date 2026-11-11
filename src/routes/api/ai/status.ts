@@ -20,9 +20,10 @@ export const Route = createFileRoute("/api/ai/status")({
             apiToken: Boolean(process.env.CLOUDFLARE_API_TOKEN?.trim()),
           },
           xai: Boolean(process.env.XAI_API_KEY?.trim()),
+          opencodeZen: true,
           note: target
             ? "AI staff can call the reasoning model."
-            : "AI staff will report unavailable until CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (or XAI_API_KEY) are set on the host.",
+            : "AI staff will report unavailable until a provider is configured.",
         });
       },
     },

@@ -36,9 +36,9 @@ describe("cloudflare provider resolution", () => {
     assert.equal(r.provider, "workers-ai");
     assert.equal(r.model, "@cf/meta/llama-3.3-70b-instruct-fp8-fast");
   });
-  it("reports none when AI is unwired", () => {
-    assert.equal(resolveProvider({}).provider, "none");
-    assert.equal(resolveProvider({ CLOUDFLARE_ACCOUNT_ID: ACCOUNT }).provider, "none");
+  it("falls back to opencode-zen when AI is unwired", () => {
+    assert.equal(resolveProvider({}).provider, "opencode-zen");
+    assert.equal(resolveProvider({ CLOUDFLARE_ACCOUNT_ID: ACCOUNT }).provider, "opencode-zen");
   });
   it("honours the configured xAI model", () => {
     assert.deepEqual(resolveProvider({ XAI_API_KEY: "x", XAI_MODEL: "grok-custom" }), {
