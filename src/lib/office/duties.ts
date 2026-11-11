@@ -255,6 +255,7 @@ export type DutyId =
   | "vantage_liveness"
   | "vantage_backlog"
   | "vantage_briefing"
+  | "vantage_compliance_review"
   | "vantage_approval_watch"
   | "foyer_intake"
   | "foyer_stale_intake"
@@ -297,6 +298,7 @@ export const DUTY_CADENCE_MINUTES: Record<DutyId, number> = {
   vantage_liveness: 30,
   vantage_backlog: 60,
   vantage_briefing: 1440,
+  vantage_compliance_review: 43200,
   vantage_approval_watch: 10080,
   foyer_intake: 10,
   foyer_stale_intake: 60,
@@ -340,6 +342,7 @@ export const DUTY_OWNER: Record<DutyId, string> = {
   vantage_liveness: "vantage",
   vantage_backlog: "vantage",
   vantage_briefing: "vantage",
+  vantage_compliance_review: "vantage",
   vantage_approval_watch: "vantage",
   foyer_intake: "foyer",
   foyer_stale_intake: "foyer",
@@ -383,6 +386,7 @@ export const DUTY_TITLES: Record<DutyId, string> = {
   vantage_liveness: "Check the floor is alive",
   vantage_backlog: "Report a blocked backlog",
   vantage_briefing: "Brief the founder daily",
+  vantage_compliance_review: "Write the monthly compliance review",
   vantage_approval_watch: "Remind the founder about waiting approvals",
   foyer_intake: "Intake and classify new enquiries",
   foyer_stale_intake: "Chase enquiries nobody picked up",
@@ -608,6 +612,8 @@ export function planDuty(duty: DutyId, view: DutyView): PlannedWork[] {
       return planBacklog(view);
     case "vantage_briefing":
       return planBriefing(view);
+    case "vantage_compliance_review":
+      return planComplianceReview(view);
     case "vantage_approval_watch":
       return planApprovalWatch(view);
     case "foyer_intake":
@@ -984,6 +990,30 @@ function planBriefing(view: DutyView): PlannedWork[] {
       priority: 70,
       payload: { date },
       dedupeKey: `briefing:${date}`,
+    },
+  ];
+}
+
+/**
+ * A monthly review of the office's own delegated authority and governance
+ * record, written from real usage, gate and audit rows.
+ *
+ * This is a report, not a power. It can name an exhausted cap or a gap in the
+ * audit chain, but it cannot widen, renew or revoke the delegation, approve a
+ * founder gate, or change a price. Those stay human decisions.
+ */
+function planComplianceReview(view: DutyView): PlannedWork[] {
+  if (!hasOfficeState(view)) return [];
+  const month = new Date(view.now).toISOString().slice(0, 7);
+  return [
+    {
+      agentId: "vantage",
+      kind: "report_compliance_review",
+      reason:
+        "One calendar month of delegated actions, founder gates and audit history deserves a written review from the office's own rows. The review reports; it cannot grant authority.",
+      priority: 80,
+      payload: { month },
+      dedupeKey: `compliance-review:${month}`,
     },
   ];
 }

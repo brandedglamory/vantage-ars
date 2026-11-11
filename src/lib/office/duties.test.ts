@@ -1668,6 +1668,31 @@ describe("briefing duty", () => {
   });
 });
 
+describe("compliance review duty", () => {
+  it("says nothing on an empty office", () => {
+    assert.deepEqual(planDuty("vantage_compliance_review", view()), []);
+  });
+
+  it("files one passive monthly review when the office has real state", () => {
+    const work = planDuty("vantage_compliance_review", view({ treasuryCents: 644000 }));
+    assert.equal(work.length, 1);
+    assert.equal(work[0].agentId, "vantage");
+    assert.equal(work[0].kind, "report_compliance_review");
+    assert.equal(work[0].dedupeKey, `compliance-review:${NOW.slice(0, 7)}`);
+    assert.equal(work[0].payload?.month, NOW.slice(0, 7));
+    assert.match(work[0].reason, /cannot grant authority/i);
+  });
+
+  it("does not file two reviews for the same month", () => {
+    const work = planDuty("vantage_compliance_review", view({ receivableCents: 100 }));
+    assert.equal(work[0].dedupeKey, `compliance-review:${NOW.slice(0, 7)}`);
+    // The dedupe key, not the planner, is what the queue enforces; two calls
+    // produce the same key so only one open item can exist.
+    const again = planDuty("vantage_compliance_review", view({ receivableCents: 200 }));
+    assert.equal(again[0].dedupeKey, work[0].dedupeKey);
+  });
+});
+
 describe("approval watch duty", () => {
   it("reminds the founder about old decisions without resolving them", () => {
     assert.deepEqual(planDuty("vantage_approval_watch", view()), []);

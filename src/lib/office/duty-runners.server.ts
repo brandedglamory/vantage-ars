@@ -291,6 +291,150 @@ const reportDailyBriefing: Runner = async (item, _view) => {
   };
 };
 
+/**
+ * The monthly compliance review.
+ *
+ * Every figure is counted from a real row in the review window. The report is
+ * deliberately passive: it can describe an exhausted cap, an unresolved gate
+ * or a broken audit chain, but it cannot renew a delegation, resolve a founder
+ * approval, move money, or contact a customer.
+ */
+const reportComplianceReview: Runner = async (item, view) => {
+  const sql = await getSql();
+  const month = str(item.payload.month) || new Date().toISOString().slice(0, 7);
+  const chainDetail = view.chainIntact
+    ? "verified; every record links to the one before it, back to genesis"
+    : "NOT verified; autonomous actions are halted until the founder resolves it";
+
+  const delegation = await sql<Record<string, unknown>>`
+    select label, status, max_amount_cents, max_actions_per_day, max_actions_per_month,
+           allow_customer_mail, allow_auto_reconcile, require_accepted_quote
+    from delegations
+    where status <> 'revoked'
+    order by updated_at desc
+    limit 1
+  `.then((rows) => rows[0]);
+
+  const usage = await sql<{ action_kind: string; n: number; cents: number }>`
+    select action_kind, count(*)::int as n, coalesce(sum(amount_cents), 0)::int as cents
+    from delegation_usage
+    where created_at > now() - interval '30 days'
+    group by action_kind
+    order by n desc, action_kind asc
+  `;
+
+  const gates = await sql<{ status: string; n: number }>`
+    select status, count(*)::int as n
+    from approvals
+    where created_at > now() - interval '30 days' or resolved_at > now() - interval '30 days'
+    group by status
+    order by status
+  `;
+
+  const decisions = await sql<{ status: string; n: number; cents: number }>`
+    select status, count(*)::int as n, coalesce(sum(amount_cents), 0)::int as cents
+    from decisions
+    where created_at > now() - interval '30 days'
+    group by status
+    order by status
+  `;
+
+  const runs = await sql<{
+    n: number;
+    executed: number;
+    escalated: number;
+    blocked: number;
+    failed: number;
+  }>`
+    select
+      count(*)::int as n,
+      coalesce(sum(executed), 0)::int as executed,
+      coalesce(sum(escalated), 0)::int as escalated,
+      coalesce(sum(blocked), 0)::int as blocked,
+      count(*) filter (where status = 'error')::int as failed
+    from agent_runs
+    where started_at > now() - interval '30 days'
+  `.then((rows) => rows[0] ?? { n: 0, executed: 0, escalated: 0, blocked: 0, failed: 0 });
+
+  const notices = await sql<{ status: string; n: number }>`
+    select status, count(*)::int as n
+    from customer_notices
+    where created_at > now() - interval '30 days'
+    group by status
+    order by status
+  `;
+
+  const auditCount = await sql<{ n: number }>`
+    select count(*)::int as n from audit_events
+    where created_at > now() - interval '30 days'
+  `.then((rows) => Number(rows[0]?.n ?? 0));
+
+  const usageTotal = usage.reduce((sum, row) => sum + Number(row.n), 0);
+  const usageCents = usage.reduce((sum, row) => sum + Number(row.cents), 0);
+  const gateTotal = gates.reduce((sum, row) => sum + Number(row.n), 0);
+  const pendingGates = gates
+    .filter((row) => row.status === "pending")
+    .reduce((sum, row) => sum + Number(row.n), 0);
+  const decisionTotal = decisions.reduce((sum, row) => sum + Number(row.n), 0);
+  const decisionCents = decisions.reduce((sum, row) => sum + Number(row.cents), 0);
+  const noticeCount = (status: string) =>
+    notices.filter((row) => row.status === status).reduce((sum, row) => sum + Number(row.n), 0);
+
+  const lines = [
+    `Review window: the 30 days before ${new Date().toISOString()}. Calendar key: ${month}.`,
+    delegation
+      ? `Delegation: ${str(delegation.label, "unnamed")} is ${str(delegation.status, "unknown")}; single-action cap ${formatZar(Number(delegation.max_amount_cents ?? 0))}; ${Number(delegation.max_actions_per_day ?? 0)} actions/day and ${Number(delegation.max_actions_per_month ?? 0)}/month; customer mail ${delegation.allow_customer_mail ? "allowed" : "not allowed"}; auto-reconcile ${delegation.allow_auto_reconcile ? "allowed" : "not allowed"}; accepted quote required ${delegation.require_accepted_quote ? "yes" : "no"}.`
+      : "Delegation: none. The office worked inside the standing founder gate only.",
+    usage.length
+      ? `Delegated actions: ${usageTotal} action(s) worth ${formatZar(usageCents)} — ${usage.map((row) => `${row.action_kind} ${row.n} (${formatZar(Number(row.cents))})`).join(", ")}.`
+      : "Delegated actions: none in the window.",
+    `Founder gates: ${gateTotal} raised or resolved in the window; ${pendingGates} still pending. This review did not approve any gate.`,
+    decisions.length
+      ? `Decision record: ${decisionTotal} decision(s) worth ${formatZar(decisionCents)} — ${decisions.map((row) => `${row.n} ${row.status}`).join(", ")}.`
+      : "Decision record: no decisions in the window.",
+    `Audit chain: ${chainDetail}; ${auditCount} new audit event(s) in the window.`,
+    `Customer notices: ${noticeCount("sent")} sent, ${noticeCount("not_delivered")} not delivered, ${noticeCount("approved_unsent")} approved but unsent.`,
+    `Run activity: ${Number(runs.n)} run(s), ${Number(runs.executed)} executed, ${Number(runs.escalated)} escalated, ${Number(runs.blocked)} blocked, ${Number(runs.failed)} failed.`,
+    "Boundary: this review only reports. It did not approve, renew, widen or revoke a delegation, resolve a founder gate, move money, change a price, or contact a customer.",
+  ];
+
+  const documentId = await fileDocument({
+    title: `Compliance review · ${month}`,
+    kind: "compliance_review",
+    status: "filed",
+    summary: lines.join("\n"),
+  });
+
+  const result = await applyProposedAction(
+    "vantage",
+    {
+      kind: "notify_operator",
+      title: `Compliance review · ${month}`,
+      rationale: lines.join("\n"),
+      confidence: 0.99,
+      amountCents: 0,
+      payload: {
+        month,
+        documentId,
+        delegatedActions: usageTotal,
+        delegatedCents: usageCents,
+        pendingGates,
+        chainOk: view.chainIntact,
+      },
+    },
+    { source: "scheduler", workItem: item.id },
+  );
+
+  await sendFounderAlert(`Compliance review · ${month}`, lines.join("\n"), "/office/technical");
+
+  return {
+    outcome: `Filed compliance review ${documentId} for ${month}: ${result.status}.`,
+    executed: result.status === "executed" ? 1 : 0,
+    escalated: result.status === "escalated" ? 1 : 0,
+    blocked: result.status === "blocked" ? 1 : 0,
+  };
+};
+
 const reportStaleApprovals: Runner = async (item) => {
   const count = intOf(item.payload.total);
   const title = `Founder decisions still waiting (${count})`;
@@ -2050,6 +2194,7 @@ export const RUNNERS: Record<string, Runner> = {
   report_stuck_backlog: reportStuckBacklog,
   report_abandoned_work: reportAbandonedWork,
   report_daily_briefing: reportDailyBriefing,
+  report_compliance_review: reportComplianceReview,
   report_stale_approvals: reportStaleApprovals,
   route_inbound: routeInbound,
   classify_inbound: classifyInbound,

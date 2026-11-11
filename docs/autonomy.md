@@ -57,7 +57,7 @@ reconstructing it from the queue afterwards.
                  └──────┬───────┘
                         │  no
                  ┌──────▼───────────┐
-      41 duties → │      PLAN        │  pure function of the real office state
+      42 duties → │      PLAN        │  pure function of the real office state
                  └──────┬───────────┘  returns work, or nothing
                         │
                  ┌──────▼───────────┐
@@ -76,7 +76,7 @@ reconstructing it from the queue afterwards.
 
 ## The duties
 
-Forty-one duties, every agent has at least one, and none of them can act
+Forty-two duties, every agent has at least one, and none of them can act
 outside its owner's role. The most recent three are the office auditing its own
 autonomy, reviewing customer health, and writing its daily offline backup
 (below).
@@ -86,6 +86,7 @@ autonomy, reviewing customer health, and writing its daily offline backup
 | VANTAGE | `vantage_liveness`            | 30m     | Reports an agent that has work waiting and is not working, or has never run                                                                                                                                  |
 | VANTAGE | `vantage_backlog`             | 60m     | Reports a stuck queue and anything abandoned after retries                                                                                                                                                   |
 | VANTAGE | `vantage_briefing`            | 24h     | One factual daily summary for the founder: books, pipeline, queue, last day's activity — every figure from a record                                                                                          |
+| VANTAGE | `vantage_compliance_review`   | 30d     | Writes a monthly review of delegated action usage, founder gates, decision outcomes, customer notices and audit-chain integrity. It reports only; it cannot grant, renew or revoke authority.             |
 | VANTAGE | `vantage_approval_watch`      | 168h    | Reminds the founder weekly about approvals pending for seven days; links to the approval desk and never resolves them                                                                                        |
 | VANTAGE | `vantage_autonomy_audit`      | 24h     | Scores the office's own distance from unattended work and reports every gap with the one action that closes it. Critical gaps daily, optional warnings weekly. It cannot grant itself authority. |
 | FOYER   | `foyer_intake`                | 10m     | Classifies unrouted enquiries into a lead or a service ticket                                                                                                                                                |
