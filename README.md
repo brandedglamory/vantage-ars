@@ -1,10 +1,32 @@
 # Vantage-ARS
 
+[![Version](https://img.shields.io/badge/version-5.0.5-blue.svg)](CHANGELOG.md)
+[![Node](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Private-red.svg)]()
+
 The public website and founder-controlled, AI-staffed office for Vantage-ARS
 ([vantage-ars.co.za](https://vantage-ars.co.za)): VoIP, networking and IT
 infrastructure support, South Africa.
 
-Author: Juan-louw Greyling <juanlouw.greyling@gmail.com>
+**Author:** Juan-louw Greyling <juanlouw.greyling@gmail.com>
+
+> *An autonomous AI office system that handles business operations with human oversight and constitutional governance.*
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.example .env
+
+# Start development server
+npm run dev
+```
+
+For detailed setup instructions, see [README.DEV.md](README.DEV.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Stack
 
