@@ -1,0 +1,1 @@
+var e=`__Host-grok_gate_session`;function t(){return typeof document>`u`?!1:document.cookie.split(`;`).some(t=>t.trim().startsWith(`${e}=`))}export{t as n,e as t};
