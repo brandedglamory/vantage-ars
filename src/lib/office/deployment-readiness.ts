@@ -53,7 +53,7 @@ export function buildDeploymentReadiness(env: Record<string, unknown> = {}): Dep
   const cloudflareAccount = normalize(env.CLOUDFLARE_ACCOUNT_ID);
   const cloudflareToken = normalize(env.CLOUDFLARE_API_TOKEN);
   const cloudflarePartial = Boolean(cloudflareAccount) !== Boolean(cloudflareToken);
-  const aiConfigured = Boolean(cloudflareAccount && cloudflareToken) || Boolean(normalize(env.XAI_API_KEY) || normalize(env.HUGGINGFACE_API_TOKEN));
+  const aiConfigured = true; // A free OpenCode Zen model is always available, so AI staff are never blocked on credentials.
 
   const focus: string[] = [];
 
