@@ -612,7 +612,7 @@ export async function aiSpendSummary(): Promise<{
 }
 
 /** One bounded retry on timeout, rate limit, or 5xx. Returns null if every attempt timed out. */
-async function callModel(target: ModelTarget, payload: string): Promise<Response | null> {
+async function callSingleModel(target: ModelTarget, payload: string): Promise<Response | null> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const res = await fetch(target.url, {
@@ -633,6 +633,22 @@ async function callModel(target: ModelTarget, payload: string): Promise<Response
     await new Promise((resolve) => setTimeout(resolve, 800));
   }
   return null;
+}
+
+/** Try the primary model, then any free-model fallbacks, so a retired or rate-limited model never blocks the office. */
+async function callModel(target: ModelTarget, payload: string): Promise<Response | null> {
+  const candidates = [target, ...(target.fallbacks ?? [])];
+  let last: Response | null = null;
+  for (const candidate of candidates) {
+    const res = await callSingleModel(candidate, payload);
+    if (res && res.ok) return res;
+    if (res && res.status >= 400 && res.status < 500 && res.status !== 429) {
+      // A client error on this model is unlikely to be fixed by another free model.
+      return res;
+    }
+    last = res ?? last;
+  }
+  return last;
 }
 
 function normaliseAction(item: ModelAction, allowed: ActionKind[]): ProposedAction | null {

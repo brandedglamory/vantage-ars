@@ -11,6 +11,8 @@ export type ModelTarget = {
   key: string;
   model: string;
   headers?: Record<string, string>;
+  /** Lower-priority models to try if this one fails. */
+  fallbacks?: ModelTarget[];
 };
 
 const OPENCODE_ZEN_URL = "https://opencode.ai/zen/v1/chat/completions";
@@ -40,9 +42,16 @@ function opencodeKey(env: Record<string, string | undefined>): string {
   );
 }
 
-function opencodeTarget(
+const OPENCODE_ZEN_FALLBACK_MODELS = [
+  "deepseek-v4.1-flash-free",
+  "glm-5.3-flash-free",
+  "longcat-2.5-free",
+];
+
+function opencodeTargetForModel(
   env: Record<string, string | undefined>,
   provider: string,
+  model: string,
 ): ModelTarget {
   const url =
     env.OPENCODE_ZEN_URL?.trim() ||
@@ -52,9 +61,23 @@ function opencodeTarget(
     provider,
     url,
     key: opencodeKey(env),
-    model: opencodeModel(env),
+    model,
     headers: OPENCODE_ZEN_HEADERS,
   };
+}
+
+function opencodeTarget(
+  env: Record<string, string | undefined>,
+  provider: string,
+): ModelTarget {
+  const primary = opencodeModel(env);
+  const target = opencodeTargetForModel(env, provider, primary);
+  // Keep a small, diverse fallback chain so a single free model being rate-limited
+  // or retired does not take the whole office's reasoning offline.
+  target.fallbacks = OPENCODE_ZEN_FALLBACK_MODELS.filter((m) => m !== primary).map((m) =>
+    opencodeTargetForModel(env, provider, m),
+  );
+  return target;
 }
 
 const OPENCODE_ZEN_ALIASES = new Set([
